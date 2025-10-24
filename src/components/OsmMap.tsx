@@ -119,10 +119,6 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
   };
 
 
-
-
-
-
   const handleRadiusAreaSearch = async () => {
   setLoading(true);
 
@@ -133,16 +129,11 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
   }
 
   try {
-    // Fetch local server data
-    const res = await fetch("/data/serverData.geojson"); // Make sure this file is inside public/
-    if (!res.ok) throw new Error("Failed to load file");
 
-    const data = await res.json();
-
-    // Simulate network delay (e.g., 2 seconds)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-
+     // Call your POST API
+    const center = { lat: circleCenter[0], lng: circleCenter[1] };
+    const radius = radiusInMeters; // or convert if needed
+    const data = await fetchGoodParcels(center, radius);
     if (data?.parcels) {
       const geojson = {
         type: "FeatureCollection",

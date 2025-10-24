@@ -1,5 +1,7 @@
+const baseUrl="http://178.128.39.219/"
+
 export const fetchGoodParcels = async (center: { lat: number; lng: number }, radius: number) => {
-  const response = await fetch('http://159.223.245.34/good-parcels', {
+  const response = await fetch(`${baseUrl}good-parcels`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
