@@ -211,7 +211,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
     }, []);
 
   return (
-    <div className="flex px-2">
+    <div className="flex px-2" style={{ height: "calc(100vh - 70px)" }}>
       <div className="flex flex-col mx-1 my-2 space-y-3">
         {/* Location Search Input */}
         <div className="h-10 w-64">
@@ -307,10 +307,11 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
       </div>
 
       {/* Map */}
+       <div className="flex-1 h-full">
       <MapContainer
         center={position || [51.505, -0.09]}
         zoom={2}
-        style={{ height: "90vh", width: "100%" }}
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"
@@ -370,6 +371,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
         <FlyToLocation position={position} />
         <MapClickHandler onMapClick={handleMapClick} />
       </MapContainer>
+      </div>
       {/* Side Panel for Parcel Details */}
       <ParcelDetails
         selectedParcel={selectedParcel}

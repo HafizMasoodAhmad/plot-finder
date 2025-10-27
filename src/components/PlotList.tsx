@@ -70,7 +70,7 @@ export default function PlotList({
   if (!parcels || !parcels.features) return null;
 
   return (
-    <div className="flex flex-col w-64 h-100">
+    <div className="flex flex-col w-64" style={{ height: "50vh" }}>
       {/* Fixed header */}
       <div className="p-2 bg-white sticky top-0 z-10">
         <h3 className="font-semibold text-gray-700">Plots Found</h3>

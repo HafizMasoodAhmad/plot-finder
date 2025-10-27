@@ -45,7 +45,7 @@ export default function ParcelDetails({ selectedParcel, onClose }: ParcelDetails
   const title = properties.gml_id || "Parcel Details";
 
   return (
-    <div className="fixed top-16 right-0 h-full w-[400px] bg-white shadow-lg z-[1000] overflow-y-auto">
+    <div className="absolute top-16 right-0 h-auto w-[400px] bg-white shadow-lg z-[1000] overflow-y-auto">
       
       {/* Close Button */}
       <button
