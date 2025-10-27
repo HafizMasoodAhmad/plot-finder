@@ -21,11 +21,11 @@
  */
 
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { GeoJsonFeature } from "@/types/parcelTypes";
 import React, { useEffect } from "react";
 
 interface ParcelDetailsProps {
-  selectedParcel: any;
+  selectedParcel: GeoJsonFeature | null;
   onClose: () => void;
 }
 

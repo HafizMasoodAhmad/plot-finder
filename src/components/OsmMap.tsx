@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState, useRef, useEffect } from "react";
 import {
   MapContainer,
@@ -11,20 +11,14 @@ import {
   GeoJSON,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import L, { LeafletMouseEvent } from "leaflet";
 import { OpenStreetMapProvider } from "leaflet-geosearch";
 import React from "react";
-import { isInsideCircle } from "@/utils/mapUtils";
+import { fixDefaultLeafletIcon, isInsideCircle } from "@/utils/mapUtils";
 import PlotList from "./PlotList";
 import ParcelDetails from "./ParcelDetails";
 import { fetchGoodParcels } from "@/services/parcelService";
-
-// Fix default icon issue in Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import { Parcel, GeoJsonFeatureCollection, GeoJsonFeature } from "@/types/parcelTypes";
 
 // Component to control map flyTo
 function FlyToLocation({ position }: { position: [number, number] | null }) {
@@ -44,7 +38,7 @@ function MapClickHandler({
   const map = useMap();
 
   React.useEffect(() => {
-    const handleClick = (e: any) => {
+    const handleClick = (e: LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
     };
 
@@ -74,8 +68,8 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
   //  State to store fetched parcels
-  const [parcels, setParcels] = useState<any>(null);
-  const [selectedParcel, setSelectedParcel] = useState<any>(null);
+  const [parcels, setParcels] = useState<GeoJsonFeatureCollection |null>(null);
+  const [selectedParcel, setSelectedParcel] = useState<GeoJsonFeature |null>(null);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -135,9 +129,9 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
     const radius = radiusInMeters; // or convert if needed
     const data = await fetchGoodParcels(center, radius);
     if (data?.parcels) {
-      const geojson = {
+      const geojson:GeoJsonFeatureCollection = {
         type: "FeatureCollection",
-        features: data.parcels.map((parcel: any) => ({
+        features: data.parcels.map((parcel:Parcel) => ({
           type: "Feature",
           geometry: parcel.geometry,
           properties: {
@@ -161,35 +155,39 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
 };
 
 
-const handleParcelClick = (feature: any) => {
+const handleParcelClick = (feature: GeoJsonFeature) => {
+  console.log("handleParcelClick feature",feature)
   setSelectedParcel(feature); // Open modal
 
   if (parcels?.features) {
     const index = parcels.features.findIndex(
-      (f: any) => f.properties?.gml_id === feature.properties?.gml_id
+      (f:GeoJsonFeature) => f.properties?.gml_id === feature.properties?.gml_id
     );
     if (index !== -1) setActiveIndex(index);
   }
 
   // Safely get first coordinate
   if (feature.geometry?.coordinates) {
-    let coords = feature.geometry.coordinates;
 
-    // If Polygon with nested array: [ [ [lng, lat], ... ] ]
-    if (feature.geometry.type === "Polygon") coords = coords[0];
+  let coords: number[][] | number[][][]; // intermediate type
 
-    // If MultiPolygon: [ [ [ [lng, lat], ... ] ] ]
-    if (feature.geometry.type === "MultiPolygon") coords = coords[0][0];
+  if (feature.geometry.type === "Polygon") {
+    coords = feature.geometry.coordinates[0] as number[][]; // One polygon ring
+  } else if (feature.geometry.type === "MultiPolygon") {
+    coords = feature.geometry.coordinates[0][0] as number[][]; // One polygon ring from multipolygon
+  } else {
+    console.warn("Unknown geometry type");
+    return;
+  }
 
-    // coords[0] should now be [lng, lat]
-    const firstCoord = coords[0];
+  const firstCoord = coords[0];
 
-    if (Array.isArray(firstCoord)) {
-      const [lng, lat] = firstCoord;
-      setPosition([lat, lng]);
-    } else {
-      console.warn("Invalid geometry coordinates:", coords);
-    }
+  if (Array.isArray(firstCoord) && typeof firstCoord[0] === "number") {
+    const [lng, lat] = firstCoord;
+    setPosition([lat, lng]);
+  } else {
+    console.warn("Invalid geometry coordinates:", coords);
+  }
   }
 };
 
@@ -207,6 +205,11 @@ const handleParcelClick = (feature: any) => {
 // Convert searchRadius to number safely
 const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609.34; // fallback if no radius selected
   // Scroll to active item when activeIndex changes
+
+    useEffect(() => {
+    fixDefaultLeafletIcon();
+    }, []);
+
   return (
     <div className="flex px-2">
       <div className="flex flex-col mx-1 my-2 space-y-3">
@@ -359,7 +362,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
               fillOpacity: 0.4,
             })}
             onEachFeature={(feature, layer) => {
-              layer.on("click", () => handleParcelClick(feature));
+              layer.on("click", () => handleParcelClick(feature as unknown as GeoJsonFeature));
             }}
           />
         )}

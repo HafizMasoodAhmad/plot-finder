@@ -1,11 +1,12 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { GeoJsonFeature, GeoJsonFeatureCollection } from "@/types/parcelTypes";
+import { getFirstCoordinate } from "@/utils/mapUtils";
 import React, { RefObject } from "react";
 
 /**
  * Props for the PlotList component.
  *
- * @property {any} parcels - GeoJSON object containing plot features.
+ * @property {GeoJsonFeatureCollection} parcels - GeoJSON object containing plot features.
  * @property {number | null} activeIndex - Index of the currently active (highlighted) plot.
  * @property {(index: number) => void} setActiveIndex - Callback to update the active plot index.
  * @property {(pos: [number, number]) => void} setPosition - Callback to update the map position (fly to selected plot).
@@ -13,13 +14,13 @@ import React, { RefObject } from "react";
  * @property {boolean} loading - Loading state flag (shows spinner when true).
  */
 interface PlotListProps {
-  parcels: any;
+  parcels: GeoJsonFeatureCollection | null;
   activeIndex: number | null;
   setActiveIndex: (index: number) => void;
   setPosition: (pos: [number, number]) => void;
   listRefs: RefObject<(HTMLDivElement | null)[]>;
   loading: boolean;
-  setSelectedParcel: (parcel: any) => void;
+  setSelectedParcel: (feature: GeoJsonFeature ) => void;
 }
 
 /**
@@ -77,7 +78,7 @@ export default function PlotList({
 
       {/* Scrollable list of plots */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {parcels.features.map((feature: any, idx: number) => (
+        {parcels.features.map((feature: GeoJsonFeature, idx: number) => (
           <div
             key={idx}
             // Store ref to allow scrolling active item into view
@@ -94,24 +95,16 @@ export default function PlotList({
               // Set clicked parcel as active
               setActiveIndex(idx);
               setSelectedParcel(feature);
-
-              // Fly to the first coordinate of the parcel's polygon
-              // if (feature.geometry?.coordinates?.[0]) {
-              //   const [lng, lat] = feature.geometry.coordinates[0][0][0];
-              //   setPosition([lat, lng]);
-              // }
-
+              
               // Fly to the first coordinate of the parcel's polygon
               try {
-                if (feature.geometry?.type === "Polygon") {
-                  const [lng, lat] = feature.geometry.coordinates[0][0]; // ✅ Corrected
-                  setPosition([lat, lng]);
-                } else if (feature.geometry?.type === "MultiPolygon") {
-                  const [lng, lat] = feature.geometry.coordinates[0][0][0]; // MultiPolygon has extra level
-                  setPosition([lat, lng]);
-                } else {
-                  console.warn("Unsupported geometry type:", feature.geometry);
-                }
+               // Usage:
+              const firstCoord = getFirstCoordinate(feature.geometry);
+              if (firstCoord) {
+                const [lng, lat] = firstCoord;
+                setPosition([lat, lng]);
+              }
+
               } catch (err) {
                 console.error("Error reading coordinates:", err);
               }
