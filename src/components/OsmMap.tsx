@@ -24,7 +24,7 @@ import { Parcel, GeoJsonFeatureCollection, GeoJsonFeature } from "@/types/parcel
 function FlyToLocation({ position }: { position: [number, number] | null }) {
   const map = useMap();
   if (position) {
-    map.flyTo(position, 14, { animate: true });
+    map.flyTo(position, 15, { animate: true });
   }
   return null;
 }
@@ -124,6 +124,13 @@ const handleSearch = async () => {
         setIsMapClicked(false);
         setCircleCenter(null);
         setSearchError("");
+
+        setCircleLocked(false);
+        setClickMarker(null);
+        setParcels(null);
+        setSelectedParcel(null);
+        setSearchRadius(0);
+        setActiveIndex(null);
       } else {
         setSearchError(" Only UK locations can be searched.");
       }
@@ -153,6 +160,7 @@ const handleSearch = async () => {
       } else {
         // Click is outside the circle → reset everything
         setCircleCenter([lat, lng]); // Set new center
+        setPosition([lat, lng])
         setIsMapClicked(true);
         setCircleLocked(true);
         setParcels(null); // Clear parcels
@@ -364,6 +372,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
             listRefs={listRefs}
             loading={loading}
             setSelectedParcel={setSelectedParcel}
+            setClickMarker={setClickMarker}
           />
         </div>
       </div>
@@ -393,7 +402,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
             center={circleCenter}
             radius={radiusInMeters} // Now based on selected unit
             pathOptions={{
-              color: "orange",
+              color: "#ff7300ff",
               fillColor: "white",
               fillOpacity: 0.2,
               weight: 2,

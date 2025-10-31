@@ -21,6 +21,7 @@ interface PlotListProps {
   listRefs: RefObject<(HTMLDivElement | null)[]>;
   loading: boolean;
   setSelectedParcel: (feature: GeoJsonFeature ) => void;
+  setClickMarker : (pos: [number, number]) => void;
 }
 
 /**
@@ -55,7 +56,8 @@ export default function PlotList({
   setPosition,
   listRefs,
   loading,
-  setSelectedParcel
+  setSelectedParcel,
+  setClickMarker
 }: PlotListProps) {
   // Show loading spinner if fetching data
   if (loading) {
@@ -103,6 +105,7 @@ export default function PlotList({
               if (firstCoord) {
                 const [lng, lat] = firstCoord;
                 setPosition([lat, lng]);
+                setClickMarker([lat, lng])
               }
 
               } catch (err) {
@@ -111,9 +114,12 @@ export default function PlotList({
             }}
           >
             {/* Parcel Name */}
-            <p className="text-sm font-medium">
-              {feature.properties?.plotName || "Unnamed Plot"}
+            <div className="text-sm font-medium">GML ID: <p className="inline font-medium">
+             {feature.properties?.gml_id
+              ? feature.properties.gml_id.slice(-4)
+              : ""}
             </p>
+            </div>
 
             {/* Parcel Area */}
             <p className="text-xs text-gray-500">
