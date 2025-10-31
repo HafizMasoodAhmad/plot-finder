@@ -24,7 +24,7 @@ import { Parcel, GeoJsonFeatureCollection, GeoJsonFeature } from "@/types/parcel
 function FlyToLocation({ position }: { position: [number, number] | null }) {
   const map = useMap();
   if (position) {
-    map.flyTo(position, 13, { animate: true });
+    map.flyTo(position, 14, { animate: true });
   }
   return null;
 }
@@ -61,9 +61,11 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
     null
   );
   const [circleLocked, setCircleLocked] = useState(false);
+  const [clickMarker, setClickMarker] = useState<[number, number] | null>(null);
+  const [searchError, setSearchError] = useState<string>("");
 
   const [position, setPosition] = useState<[number, number] | null>([
-    31.5497, 74.3436,
+    53.50398018147341, -2.238487463068661
   ]);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -73,22 +75,71 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const handleSearch = async () => {
-    if (!searchRef.current?.value) return;
-    const provider = new OpenStreetMapProvider();
-    const results = await provider.search({ query: searchRef.current.value });
-    if (results.length > 0) {
-      const { x, y, label } = results[0];
-      setPosition([y, x]);
-      setLocationName(label);
-      setIsMapClicked(false);
-      setCircleCenter(null);
-    } else {
-      alert("Location not found");
-    }
+const handleSearch = async () => {
+  const query = searchRef.current?.value?.trim();
+  if (!query) return;
+
+  const provider = new OpenStreetMapProvider({
+    params: {
+      countrycodes: "gb", // ask OSM to prioritize UK results
+    },
+  });
+
+  // Define UK bounding box
+  // [minLon, minLat, maxLon, maxLat]
+  const ukBounds = {
+    minLat: 49.8,  // south
+    maxLat: 60.9,  // north
+    minLon: -8.6,  // west
+    maxLon: 1.8,   // east
   };
 
+  try {
+    const results = await provider.search({ query });
+
+    if (results.length > 0) {
+      const firstResult = results[0];
+      const raw: any = firstResult.raw;
+
+      const lat = firstResult.y;
+      const lon = firstResult.x;
+      const displayName = raw?.display_name?.toLowerCase() || "";
+      const countryCode = raw?.address?.country_code?.toLowerCase?.();
+
+      // check if inside UK bounding box
+      const isInUKBox =
+        lat >= ukBounds.minLat &&
+        lat <= ukBounds.maxLat &&
+        lon >= ukBounds.minLon &&
+        lon <= ukBounds.maxLon;
+
+      // check if OSM country code confirms GB
+      const isInUK = (countryCode === "gb" || displayName.includes("united kingdom")) && isInUKBox;
+
+
+      if (isInUK) {
+        const { x, y, label } = firstResult;
+        setPosition([y, x]);
+        setLocationName(label);
+        setIsMapClicked(false);
+        setCircleCenter(null);
+        setSearchError("");
+      } else {
+        setSearchError(" Only UK locations can be searched.");
+      }
+    } else {
+      setSearchError("No results found. Please search for a UK location.");
+    }
+  } catch (error) {
+    console.error("Search error:", error);
+    setSearchError("Search failed. Please try again.");
+  }
+};
+
+
   const handleMapClick = (lat: number, lng: number) => {
+    // Always show a marker at the clicked point (single movable marker)
+    setClickMarker([lat, lng]);
     // Case 1: No circle exists yet
     if (!circleCenter) {
       setCircleCenter([lat, lng]);
@@ -211,15 +262,22 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
     }, []);
 
   return (
-    <div className="flex px-2" style={{ height: "calc(100vh - 70px)" }}>
-      <div className="flex flex-col mx-1 my-2 space-y-3">
+    <div className="flex px-2" style={{ height: "calc(100vh - 73px)" }}>
+      <div className="flex flex-col mx-1 my-2 px-2 space-y-3 h-full overflow-hidden">
         {/* Location Search Input */}
         <div className="h-10 w-64">
           <input
             ref={searchRef}
             type="text"
             placeholder="Search location..."
-            className="w-64 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-gray-400"
+            className="w-64 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-gray-400"
+            style={{marginTop:"5px"}}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value.trim() || searchError) {
+                setSearchError("");
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -228,6 +286,9 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
             }}
           />
         </div>
+        {searchError && (
+          <div className="text-xs text-red-600 w-64">{searchError}</div>
+        )}
 
         {/* Search Radius Dropdown */}
 
@@ -235,7 +296,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
           value={searchRadius}
           onChange={(e) => setSearchRadius(Number(e.target.value))}
           disabled={!isMapClicked}
-          className={`w-64 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+          className={`w-64 px-2 py-2 my-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
             isMapClicked
               ? "border-gray-300 bg-white"
               : "border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed"
@@ -250,7 +311,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
         </select>
 
         {/* Unit Selection Radio Buttons */}
-        <div className="flex items-center space-x-4 w-64">
+        <div className="flex items-center my-2 space-x-4 w-64">
           <label className="flex items-center space-x-1">
             <input
               type="radio"
@@ -294,22 +355,23 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
         )}
 
         {/* List of Plots */}
-        <PlotList
-          parcels={parcels}
-          activeIndex={activeIndex}
-          setActiveIndex={setActiveIndex}
-          setPosition={setPosition}
-          listRefs={listRefs}
-          loading={loading}
-          setSelectedParcel={setSelectedParcel}
-
-        />
+        <div className="flex-1 min-h-0 mb-6">
+          <PlotList
+            parcels={parcels}
+            activeIndex={activeIndex}
+            setActiveIndex={setActiveIndex}
+            setPosition={setPosition}
+            listRefs={listRefs}
+            loading={loading}
+            setSelectedParcel={setSelectedParcel}
+          />
+        </div>
       </div>
 
       {/* Map */}
        <div className="flex-1 h-full">
       <MapContainer
-        center={position || [51.505, -0.09]}
+        center={position || [53.50398018147341, -2.238487463068661] }
         zoom={2}
         style={{ height: "100%", width: "100%" }}
       >
@@ -317,12 +379,12 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {position && (
-          <Marker position={position}>
+        {clickMarker && (
+          <Marker position={clickMarker}>
             <Popup>
-              <strong>{locationName}</strong>
+              <strong>Selected Point</strong>
               <br />
-              {position[0]}, {position[1]}
+              {clickMarker[0]}, {clickMarker[1]}
             </Popup>
           </Marker>
         )}

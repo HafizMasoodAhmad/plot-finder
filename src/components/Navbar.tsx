@@ -6,7 +6,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <nav className="bg-gray-50 shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo - Left side */}
         <div className="flex items-center">
