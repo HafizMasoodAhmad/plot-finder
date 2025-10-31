@@ -302,7 +302,13 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
 
         <select
           value={searchRadius}
-          onChange={(e) => setSearchRadius(Number(e.target.value))}
+            onChange={(e) => {
+            const newRadius = Number(e.target.value);
+            setSearchRadius(newRadius);
+            setParcels(null);          // Reset parcels when radius changes
+            setSelectedParcel(null);   // Optional: Clear selected parcel
+            setActiveIndex(null);      // Optional: Reset highlighted list item
+          }}
           disabled={!isMapClicked}
           className={`w-64 px-2 py-2 my-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
             isMapClicked
