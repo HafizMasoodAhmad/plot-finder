@@ -21,11 +21,13 @@ import { fetchGoodParcels } from "@/services/parcelService";
 import { Parcel, GeoJsonFeatureCollection, GeoJsonFeature } from "@/types/parcelTypes";
 
 // Component to control map flyTo
-function FlyToLocation({ position }: { position: [number, number] | null }) {
+function FlyToLocation({ position, zoomLevel }: { position: [number, number] | null; zoomLevel:number }) {
   const map = useMap();
-  if (position) {
-    map.flyTo(position, 15, { animate: true });
-  }
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, zoomLevel, { animate: true });
+    }
+  }, [position, zoomLevel, map]); // Re-run when zoom or position changes
   return null;
 }
 
@@ -63,9 +65,11 @@ const [searchRadius, setSearchRadius] = useState<number>(0);
   const [circleLocked, setCircleLocked] = useState(false);
   const [clickMarker, setClickMarker] = useState<[number, number] | null>(null);
   const [searchError, setSearchError] = useState<string>("");
+  const [zoomLevel, setZoomLevel] = useState(6); // Initial zoom
 
-  const [position, setPosition] = useState<[number, number] | null>([
-    53.50398018147341, -2.238487463068661
+
+  const [position, setPosition] = useState<[number, number]>([
+    52.59754463154836, -1.6689273017514616
   ]);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -120,6 +124,7 @@ const handleSearch = async () => {
       if (isInUK) {
         const { x, y, label } = firstResult;
         setPosition([y, x]);
+        setZoomLevel(15)
         setLocationName(label);
         setIsMapClicked(false);
         setCircleCenter(null);
@@ -150,6 +155,7 @@ const handleSearch = async () => {
     // Case 1: No circle exists yet
     if (!circleCenter) {
       setCircleCenter([lat, lng]);
+      setPosition([lat, lng])
       setIsMapClicked(true); // Map has been clicked
       setCircleLocked(true); // Lock the circle
     } else {
@@ -307,7 +313,10 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
             setSearchRadius(newRadius);
             setParcels(null);          // Reset parcels when radius changes
             setSelectedParcel(null);   // Optional: Clear selected parcel
-            setActiveIndex(null);      // Optional: Reset highlighted list item
+            setActiveIndex(null);   
+            if (newRadius > 0) {
+              setZoomLevel(15);
+            }  
           }}
           disabled={!isMapClicked}
           className={`w-64 px-2 py-2 my-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
@@ -386,8 +395,8 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
       {/* Map */}
        <div className="flex-1 h-full">
       <MapContainer
-        center={position || [53.50398018147341, -2.238487463068661] }
-        zoom={2}
+        center={position}
+        zoom={zoomLevel}
         style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
@@ -445,7 +454,7 @@ const radiusInMeters = unit === "km" ? searchRadius * 1000 : searchRadius * 1609
           />
         )}
 
-        <FlyToLocation position={position} />
+        <FlyToLocation position={position} zoomLevel={zoomLevel} />
         <MapClickHandler onMapClick={handleMapClick} />
       </MapContainer>
       </div>
